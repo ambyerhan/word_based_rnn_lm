@@ -72,42 +72,6 @@ def highway(input_, size, num_layers=1, bias=-2.0, f=tf.nn.relu, scope='Highway'
     return output
 
 
-def tdnn(input_, kernels, kernel_features, scope='TDNN'):
-    '''
-
-    :input:           input float tensor of shape [(batch_size*num_unroll_steps) x max_word_length x embed_size]
-    :kernels:         array of kernel sizes
-    :kernel_features: array of kernel feature sizes (parallel to kernels)
-    '''
-    assert len(kernels) == len(kernel_features), 'Kernel and Features must have the same size'
-
-    max_word_length = input_.get_shape()[1]
-    embed_size = input_.get_shape()[-1]
-
-    # input_: [batch_size*num_unroll_steps, 1, max_word_length, embed_size]
-    input_ = tf.expand_dims(input_, 1)
-
-    layers = []
-    with tf.variable_scope(scope):
-        for kernel_size, kernel_feature_size in zip(kernels, kernel_features):
-            reduced_length = max_word_length - kernel_size + 1
-
-            # [batch_size*num_unroll_steps, 1, reduced_length, kernel_feature_size]
-            conv = conv2d(input_, kernel_feature_size, 1, kernel_size, name="kernel_%d" % kernel_size)
-
-            # [batch_size*num_unroll_steps, 1, 1, kernel_feature_size]
-            pool = tf.nn.max_pool(tf.tanh(conv), [1, 1, reduced_length, 1], [1, 1, 1, 1], 'VALID')
-
-            layers.append(tf.squeeze(pool, [1, 2]))
-
-        if len(kernels) > 1:
-            output = tf.concat(layers, 1)
-        else:
-            output = layers[0]
-
-    return output
-
-
 def inference_graph(word_vocab_size,
                     word_embed_size=650,
                     batch_size=20,
@@ -194,6 +158,25 @@ def loss_graph(logits, batch_size, num_unroll_steps):
         targets=targets,
         loss=loss
     )
+
+
+def _get_mask(x):
+    ret = tf.to_float(tf.not_equal(x, 0)) # assume that PAD_ID == 0
+    return ret
+
+
+def score_graph(logits, batch_size, num_unroll_steps, alpha):
+
+    with tf.variable_scope('Loss'):
+        targets = tf.placeholder(tf.int64, [batch_size, num_unroll_steps], name = 'targets')
+        target_list = [tf.squeeze(x, [1]) for x in tf.split(targets, num_unroll_steps, 1)]
+
+        scores = -1 * tf.nn.sparse_softmax_cross_entropy_with_logits(logits = logits, labels = target_list)
+        mask = _get_mask(targets)
+        seq_len = tf.pow((5. + tf.reduce_sum(mask, axis = 1)) / 6., alpha)
+        scores = tf.reduce_sum(scores, axis = [1]) / seq_len
+
+        return adict(scores = scores)
 
 
 def training_graph(loss, learning_rate=1.0, max_grad_norm=5.0):

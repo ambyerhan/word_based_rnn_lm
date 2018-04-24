@@ -25,8 +25,6 @@ flags.DEFINE_string('load_model',   None,    '(optional) filename of the model t
 flags.DEFINE_integer('rnn_size',        650,                            'size of LSTM internal state')
 flags.DEFINE_integer('highway_layers',  2,                              'number of highway layers')
 flags.DEFINE_integer('word_embed_size', 650,                             'dimensionality of character embeddings')
-flags.DEFINE_string ('kernels',         '[1,2,3,4,5,6,7]',              'CNN kernel widths')
-flags.DEFINE_string ('kernel_features', '[50,100,150,200,200,200,200]', 'number of features in the CNN kernel')
 flags.DEFINE_integer('rnn_layers',      2,                              'number of layers in the LSTM')
 flags.DEFINE_float  ('dropout',         0.5,                            'dropout. 0 = no dropout')
 
@@ -39,7 +37,6 @@ flags.DEFINE_integer('num_unroll_steps',    8,   'number of timesteps to unroll 
 flags.DEFINE_integer('batch_size',          2,   'number of sequences to train on in parallel') # 20
 flags.DEFINE_integer('max_epochs',          25,   'number of full passes through the training data')
 flags.DEFINE_float  ('max_grad_norm',       5.0,  'normalize gradients at')
-flags.DEFINE_integer('max_word_length',     65,   'maximum word length')
 
 # bookkeeping
 flags.DEFINE_integer('seed',           3435, 'random number generator seed')
